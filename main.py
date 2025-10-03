@@ -37,24 +37,20 @@ driver.set_page_load_timeout(300)   # 防止刷新超时
 
 def find_and_click_chapter(chapter):
     try:
-        course = WebDriverWait(driver, timeout=180).until(
-            lambda d: d.find_element(By.XPATH, f"//p[text()='{chapter}']")
-        )
-
-        if is_complete(course):  # 判断是否已经完成
-            print(f'{chapter}已学完，跳过')
+        if is_complete(chapter):  # 判断是否已经完成
+            print(f'{chapter.text}已学完，跳过')
             return 'jump'
 
-        driver.execute_script("arguments[0].click();", course)
+        driver.execute_script("arguments[0].click();", chapter)
         title = WebDriverWait(driver, timeout=180).until(
             EC.element_to_be_clickable((By.XPATH, '//p[@data-v-5491f82c]'))
         )
         # 消除空格
-        title_name, course_name = title.text.replace(" ", ""), chapter.replace(' ', '')
+        title_name, course_name = title.text.replace(" ", ""), chapter.text.replace(' ', '')
         # 检查是否成功切换
         while course_name != title_name and course_name not in title_name and title_name not in course_name:
             print(f'当前课件 {title_name} 与应看课件 {course_name} 不符，正在切换')
-            driver.execute_script("arguments[0].click();", course)  # 使用JavaScript点击，避免隐藏元素点击失败
+            driver.execute_script("arguments[0].click();", chapter)  # 使用JavaScript点击，避免隐藏元素点击失败
             sleep(2)
             title = WebDriverWait(driver, timeout=180).until(
                 EC.element_to_be_clickable((By.XPATH, '//p[@data-v-5491f82c]'))
@@ -65,7 +61,7 @@ def find_and_click_chapter(chapter):
         print('加载失败，请检查网络')
 
 def judge_type(chapter):
-    print(f'判断{chapter}')
+    print(f'判断{chapter.text}')
     try:  # 如果是视频
         video = WebDriverWait(driver, timeout=35).until(
             lambda d: d.find_element(By.TAG_NAME, 'video')
@@ -126,7 +122,7 @@ def is_complete(course):
         else:
             return False
     except NoSuchElementException:
-        # 有些课件没有图标
+        # 有些课件没有图标无法判断是否学完，只能当作未学习处理
         return False
 
 def write_error(e, chapter):
@@ -143,13 +139,13 @@ def main():
     login(driver, USERNAME, PASSWORD)
     print('登录成功')
 
-    chapters = get_course_list(driver, URL, USERNAME, PASSWORD)
+    chapters = get_course_list(driver)
 
     error = []
     for chapter in chapters:
         try:
             # 点击视频/课件
-            print(f'查找并点击{chapter}')
+            print(f'查找并点击{chapter.text}')
             if find_and_click_chapter(chapter) == 'jump':
                 continue
             # 判断类型
